@@ -1,0 +1,5 @@
+{
+  "name": "Artifex AI",
+  "description": "An AI-powered mentor for CAD and Digital Art. Features personalized learning paths, daily challenges with time-based rankings, and intelligent workflow assistance using Gemini.",
+  "requestFramePermissions": []
+}
