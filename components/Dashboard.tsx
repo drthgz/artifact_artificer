@@ -17,7 +17,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, paths, onNavigate, onStartC
   const handleGenerateChallenge = async () => {
     setLoadingChallenge(true);
     try {
-        const challenge = await generateDailyChallenge(user.domain, user.tool);
+        const challenge = await generateDailyChallenge(user.domain, user.tool, user.skillLevel);
         onStartChallenge(challenge);
     } catch (e) {
         alert("Failed to generate challenge. Try again.");

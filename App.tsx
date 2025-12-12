@@ -49,8 +49,7 @@ const App = () => {
     // Add the new path
     setPaths(prev => [...prev, pathData]);
     
-    // If it's the first path or user specifically added it, set as active?
-    // Let's just go to dashboard and let them see it
+    // Always go to dashboard after adding path
     setView('dashboard');
     
     // Auto open chat to welcome if first time
@@ -83,12 +82,13 @@ const App = () => {
     }));
   };
 
-  const handleChallengeFinish = () => {
-      // Logic for finishing challenge (e.g., show summary, award XP)
-      // For now, just close and return to dashboard
+  const handleChallengeFinish = (xpReward: number) => {
+      // Award XP
+      if (user) {
+          setUser(prev => prev ? ({ ...prev, xp: prev.xp + xpReward }) : null);
+      }
       setIsChallengeStarted(false);
       setActiveChallenge(null);
-      alert("Challenge Completed! Stats saved.");
   };
 
   // Navigation handlers
@@ -110,16 +110,6 @@ const App = () => {
       stepDesc: view === 'path' ? activeStep?.description : undefined
   };
 
-  // Initial Onboarding View
-  if (!user && view === 'onboarding') {
-    return <Onboarding onComplete={handleOnboardingComplete} />;
-  }
-  
-  // Secondary Onboarding View (Adding a path)
-  if (user && view === 'onboarding') {
-       return <Onboarding onComplete={handleOnboardingComplete} />;
-  }
-
   // Active Challenge View (Overrides everything)
   if (isChallengeStarted && activeChallenge && user) {
       return (
@@ -128,13 +118,25 @@ const App = () => {
             userTool={user.tool}
             onFinish={handleChallengeFinish}
             onCancel={() => {
-                if(confirm("Are you sure you want to quit?")) {
+                // No confirm dialog needed if it's annoying, or simple confirm
+                if(confirm("Are you sure you want to quit this challenge? Progress will be lost.")) {
                     setIsChallengeStarted(false);
                     setActiveChallenge(null);
                 }
             }}
           />
       );
+  }
+
+  // Onboarding View (Initial or Add Path)
+  if (view === 'onboarding') {
+    return (
+        <Onboarding 
+            onComplete={handleOnboardingComplete} 
+            initialName={user?.name} // Pass name if user exists to skip step 1
+            onCancel={user ? () => setView('dashboard') : undefined} // Allow cancel if user exists
+        />
+    );
   }
 
   return (
@@ -165,7 +167,7 @@ const App = () => {
         {/* Theme Toggle */}
         <button 
             onClick={toggleTheme}
-            className="mb-6 p-3 rounded-xl text-gray-400 hover:text-white hover:bg-gray-100 dark:hover:bg-white/5 transition-colors"
+            className="mb-6 p-3 rounded-xl text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5 transition-colors"
             title="Toggle Theme"
         >
             {theme === 'light' ? (

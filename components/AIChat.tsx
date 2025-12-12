@@ -189,7 +189,7 @@ const AIChat: React.FC<AIChatProps> = ({ isOpen, onToggle, context }) => {
   // Render markdown safely
   const renderMessageText = (text: string) => {
       const html = marked.parse(text) as string;
-      return <div className="prose prose-invert prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: html }} />;
+      return <div className="prose prose-sm max-w-none dark:prose-invert" dangerouslySetInnerHTML={{ __html: html }} />;
   };
 
   if (!isOpen) {
@@ -204,29 +204,29 @@ const AIChat: React.FC<AIChatProps> = ({ isOpen, onToggle, context }) => {
   }
 
   return (
-    <div className="fixed top-0 right-0 h-full w-96 bg-surface border-l border-white/10 shadow-2xl z-50 flex flex-col transform transition-transform duration-300">
+    <div className="fixed top-0 right-0 h-full w-96 bg-white dark:bg-dark-surface border-l border-gray-200 dark:border-white/10 shadow-2xl z-50 flex flex-col transform transition-transform duration-300">
       {/* Header */}
-      <div className="p-4 border-b border-white/10 flex justify-between items-center bg-surfaceHighlight">
+      <div className="p-4 border-b border-gray-200 dark:border-white/10 flex justify-between items-center bg-gray-50 dark:bg-surfaceHighlight">
         <div className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
             <div>
-                <h3 className="font-semibold text-white leading-none">Artifex Copilot</h3>
+                <h3 className="font-semibold text-gray-900 dark:text-white leading-none">Artifex Copilot</h3>
                 <span className="text-[10px] text-gray-500">{context.tool} • {context.stepTitle ? 'Module Active' : 'Idle'}</span>
             </div>
         </div>
-        <button onClick={onToggle} className="text-gray-400 hover:text-white">
+        <button onClick={onToggle} className="text-gray-400 hover:text-gray-900 dark:hover:text-white">
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
         </button>
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-white dark:bg-dark-surface">
         {messages.map((msg) => (
           <div key={msg.id} className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
-            <div className={`max-w-[90%] rounded-lg overflow-hidden border border-white/5 ${
+            <div className={`max-w-[90%] rounded-lg overflow-hidden border ${
               msg.role === 'user' 
-                ? 'bg-primary text-white' 
-                : 'bg-white/5 text-gray-200'
+                ? 'bg-primary text-white border-primary' 
+                : 'bg-gray-100 dark:bg-white/5 border-gray-200 dark:border-white/10 text-gray-900 dark:text-gray-200'
             }`}>
               {/* Image Content */}
               {msg.imageUrl && (
@@ -245,7 +245,7 @@ const AIChat: React.FC<AIChatProps> = ({ isOpen, onToggle, context }) => {
         ))}
         {isTyping && (
            <div className="flex justify-start">
-             <div className="bg-white/5 rounded-lg p-3 text-sm text-gray-400 italic flex gap-1">
+             <div className="bg-gray-100 dark:bg-white/5 rounded-lg p-3 text-sm text-gray-400 italic flex gap-1">
                  <span className="animate-bounce">●</span>
                  <span className="animate-bounce delay-100">●</span>
                  <span className="animate-bounce delay-200">●</span>
@@ -256,11 +256,11 @@ const AIChat: React.FC<AIChatProps> = ({ isOpen, onToggle, context }) => {
       </div>
 
       {/* Input */}
-      <div className="p-4 border-t border-white/10 bg-surfaceHighlight">
+      <div className="p-4 border-t border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-surfaceHighlight">
         {pastedImage && (
             <div className="mb-2 space-y-2">
                 <div className="relative inline-block">
-                    <img src={pastedImage} alt="Paste" className="h-16 rounded border border-white/20" />
+                    <img src={pastedImage} alt="Paste" className="h-16 rounded border border-gray-300 dark:border-white/20" />
                     <button 
                         onClick={() => setPastedImage(null)}
                         className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 w-5 h-5 flex items-center justify-center text-xs"
@@ -269,16 +269,16 @@ const AIChat: React.FC<AIChatProps> = ({ isOpen, onToggle, context }) => {
                     </button>
                 </div>
                 {/* Mode Toggle */}
-                <div className="flex gap-1 bg-black/20 p-1 rounded-lg w-fit">
+                <div className="flex gap-1 bg-gray-200 dark:bg-black/20 p-1 rounded-lg w-fit">
                     <button 
                         onClick={() => setMode('chat')}
-                        className={`px-3 py-1 text-xs rounded-md transition-all ${mode === 'chat' ? 'bg-primary text-white' : 'text-gray-400 hover:text-white'}`}
+                        className={`px-3 py-1 text-xs rounded-md transition-all ${mode === 'chat' ? 'bg-primary text-white' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}`}
                     >
                         Analyze
                     </button>
                     <button 
                         onClick={() => setMode('edit')}
-                        className={`px-3 py-1 text-xs rounded-md transition-all ${mode === 'edit' ? 'bg-accent text-black font-bold' : 'text-gray-400 hover:text-white'}`}
+                        className={`px-3 py-1 text-xs rounded-md transition-all ${mode === 'edit' ? 'bg-accent text-black font-bold' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}`}
                     >
                         Magic Edit
                     </button>
@@ -291,7 +291,7 @@ const AIChat: React.FC<AIChatProps> = ({ isOpen, onToggle, context }) => {
           onKeyDown={handleKeyPress}
           onPaste={handlePaste}
           placeholder={pastedImage && mode === 'edit' ? "Describe changes (e.g. 'Add a neon glow')..." : `Ask about ${context.stepTitle || context.tool}...`}
-          className="w-full bg-black/20 border border-white/10 rounded-lg p-3 text-sm text-white focus:outline-none focus:border-primary resize-none h-20"
+          className="w-full bg-white dark:bg-black/20 border border-gray-300 dark:border-white/10 rounded-lg p-3 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-primary resize-none h-20"
         />
         <div className="flex justify-between items-center mt-2 text-xs text-gray-500">
           <span>Shift+Enter for new line</span>

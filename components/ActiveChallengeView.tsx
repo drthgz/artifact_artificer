@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Challenge } from '../types';
-import { generateHint } from '../services/geminiService';
+import { generateHint, evaluateChallengeSubmission } from '../services/geminiService';
 
 interface ActiveChallengeViewProps {
   challenge: Challenge;
   userTool: string;
-  onFinish: () => void;
+  onFinish: (score: number) => void;
   onCancel: () => void;
 }
 
@@ -14,6 +14,8 @@ const ActiveChallengeView: React.FC<ActiveChallengeViewProps> = ({ challenge, us
   const [penaltySeconds, setPenaltySeconds] = useState(0);
   const [hints, setHints] = useState<string[]>([]);
   const [loadingHint, setLoadingHint] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [submissionResult, setSubmissionResult] = useState<{passed: boolean, score: number, feedback: string} | null>(null);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -34,7 +36,6 @@ const ActiveChallengeView: React.FC<ActiveChallengeViewProps> = ({ challenge, us
   const handleRequestHint = async () => {
     if (loadingHint) return;
     setLoadingHint(true);
-    // Add 2 minutes (120s) penalty
     setPenaltySeconds(prev => prev + 120);
     
     try {
@@ -47,20 +48,32 @@ const ActiveChallengeView: React.FC<ActiveChallengeViewProps> = ({ challenge, us
     }
   };
 
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (!e.target.files || !e.target.files[0] || !challenge.referenceImageUrl) return;
+      
+      setUploading(true);
+      try {
+          const file = e.target.files[0];
+          const result = await evaluateChallengeSubmission(challenge.referenceImageUrl, file);
+          setSubmissionResult(result);
+      } catch (e) {
+          alert("Submission failed. Please try again.");
+      } finally {
+          setUploading(false);
+      }
+  };
+
   // Determine current tier
   const currentMinutes = totalSeconds / 60;
   let currentTier = 'GOLD';
-  let nextTier = 'SILVER';
   let timeToNext = challenge.goldTime * 60 - totalSeconds;
   
   if (currentMinutes > challenge.goldTime) {
       currentTier = 'SILVER';
-      nextTier = 'BRONZE';
       timeToNext = challenge.silverTime * 60 - totalSeconds;
   }
   if (currentMinutes > challenge.silverTime) {
       currentTier = 'BRONZE';
-      nextTier = 'FAIL';
       timeToNext = challenge.bronzeTime * 60 - totalSeconds;
   }
   if (currentMinutes > challenge.bronzeTime) {
@@ -160,15 +173,45 @@ const ActiveChallengeView: React.FC<ActiveChallengeViewProps> = ({ challenge, us
                 {loadingHint ? 'Consulting AI...' : 'Request Hint (+2:00 Penalty)'}
              </button>
 
-             <button 
-                onClick={onFinish}
-                className="w-full bg-primary hover:bg-primaryDark text-white font-bold py-4 rounded-xl shadow-lg shadow-primary/20 transition-all active:scale-95"
-             >
-                Finish Challenge
-             </button>
+             <label className={`w-full bg-primary hover:bg-primaryDark text-white font-bold py-4 rounded-xl shadow-lg shadow-primary/20 transition-all flex justify-center items-center gap-2 cursor-pointer ${uploading ? 'opacity-50 pointer-events-none' : ''}`}>
+                {uploading ? (
+                     <>
+                        <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                        Verifying...
+                    </>
+                ) : "Upload & Verify Work"}
+                <input type="file" className="hidden" accept="image/*" onChange={handleFileUpload} disabled={uploading} />
+             </label>
         </div>
-
       </div>
+      
+      {/* Result Modal Overlay */}
+      {submissionResult && (
+          <div className="absolute inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+              <div className="bg-white dark:bg-dark-surface p-8 rounded-3xl max-w-md w-full text-center border border-gray-200 dark:border-white/10">
+                  {submissionResult.passed ? (
+                      <>
+                        <div className="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-6 text-white text-4xl shadow-lg shadow-green-500/40">✓</div>
+                        <h3 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Challenge Complete!</h3>
+                        <p className="text-gray-500 mb-6">Match Score: <span className="text-green-500 font-bold">{submissionResult.score}%</span></p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-8">{submissionResult.feedback}</p>
+                        <button onClick={() => onFinish(submissionResult.score * 10)} className="w-full bg-primary text-white font-bold py-3 rounded-xl">Claim Reward</button>
+                      </>
+                  ) : (
+                      <>
+                        <div className="w-20 h-20 bg-red-500 rounded-full flex items-center justify-center mx-auto mb-6 text-white text-4xl shadow-lg shadow-red-500/40">✕</div>
+                        <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Not Quite There</h3>
+                        <p className="text-gray-500 mb-6">Match Score: <span className="text-red-500 font-bold">{submissionResult.score}%</span></p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-8">{submissionResult.feedback}</p>
+                        <div className="flex gap-4">
+                            <button onClick={() => setSubmissionResult(null)} className="flex-1 border border-gray-300 dark:border-white/20 text-gray-700 dark:text-white font-bold py-3 rounded-xl hover:bg-gray-100 dark:hover:bg-white/5">Try Again</button>
+                            <button onClick={onCancel} className="flex-1 text-red-500 font-bold py-3">Give Up</button>
+                        </div>
+                      </>
+                  )}
+              </div>
+          </div>
+      )}
     </div>
   );
 };
