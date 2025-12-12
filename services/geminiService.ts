@@ -19,6 +19,21 @@ const getAIClient = () => {
   return new GoogleGenAI({ apiKey: apiKey || '' });
 };
 
+// Helper to extract JSON from potentially Markdown-wrapped text
+const parseJSON = (text: string) => {
+  try {
+    // Attempt clean parse first
+    return JSON.parse(text);
+  } catch (e) {
+    // Fallback: Extract from code blocks or find first/last brace
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      return JSON.parse(jsonMatch[0]);
+    }
+    throw new Error("Failed to parse JSON response");
+  }
+};
+
 /**
  * Generates a personalized learning path using Gemini 3 Pro with high thinking budget
  * for complex curriculum design.
@@ -34,7 +49,7 @@ export const generateLearningPath = async (
   const prompt = `Create a detailed learning path for a ${level} student in ${domain} using ${tool}.
   Their specific goal is: "${goal}".
   
-  The path should move from basic concepts to an advanced project.
+  The path should move from basic concepts to an advanced project. 
   Structure the response as a JSON object strictly matching this schema:
   {
     "title": "string (Creative name for the path)",
@@ -46,10 +61,13 @@ export const generateLearningPath = async (
         "title": "string",
         "description": "string (detailed instructions)",
         "criteria": ["string", "string"],
+        "detailedSteps": ["string (Step 1...)", "string (Step 2...)"],
         "xpReward": number
       }
     ]
   }
+  
+  IMPORTANT: Populate "detailedSteps" with 3-5 granular, actionable mini-steps for the user to follow to achieve the main description. This is crucial for beginners.
   `;
 
   try {
@@ -63,7 +81,7 @@ export const generateLearningPath = async (
     });
 
     const text = response.text || "{}";
-    const pathData = JSON.parse(text);
+    const pathData = parseJSON(text);
     
     // Enrich with local-only status fields
     pathData.id = Date.now().toString(); // Ensure ID
@@ -127,7 +145,7 @@ export const reviewSubmission = async (
       }
     });
 
-    const result = JSON.parse(response.text || "{}");
+    const result = parseJSON(response.text || "{}");
     return result;
   } catch (error) {
     console.error("Submission review failed:", error);
@@ -168,7 +186,7 @@ export const generateDailyChallenge = async (domain: string, tool: string, skill
         contents: designPrompt,
         config: { responseMimeType: "application/json" }
     });
-    design = JSON.parse(designResp.text || "{}");
+    design = parseJSON(designResp.text || "{}");
   } catch (e) {
       console.error("Failed to generate challenge text", e);
       // Fallback design
@@ -264,7 +282,7 @@ export const evaluateChallengeSubmission = async (
             config: { responseMimeType: "application/json" }
         });
         
-        return JSON.parse(response.text || "{}");
+        return parseJSON(response.text || "{}");
     } catch (e) {
         console.error("Evaluation failed", e);
         // Fallback for demo if API fails

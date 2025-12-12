@@ -206,7 +206,7 @@ const AIChat: React.FC<AIChatProps> = ({ isOpen, onToggle, context }) => {
   return (
     <div className="fixed top-0 right-0 h-full w-96 bg-white dark:bg-dark-surface border-l border-gray-200 dark:border-white/10 shadow-2xl z-50 flex flex-col transform transition-transform duration-300">
       {/* Header */}
-      <div className="p-4 border-b border-gray-200 dark:border-white/10 flex justify-between items-center bg-gray-50 dark:bg-surfaceHighlight">
+      <div className="p-4 border-b border-gray-200 dark:border-white/10 flex justify-between items-center bg-gray-100 dark:bg-dark-surfaceHighlight">
         <div className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
             <div>
@@ -226,7 +226,7 @@ const AIChat: React.FC<AIChatProps> = ({ isOpen, onToggle, context }) => {
             <div className={`max-w-[90%] rounded-lg overflow-hidden border ${
               msg.role === 'user' 
                 ? 'bg-primary text-white border-primary' 
-                : 'bg-gray-100 dark:bg-white/5 border-gray-200 dark:border-white/10 text-gray-900 dark:text-gray-200'
+                : 'bg-gray-200 dark:bg-white/5 border-gray-300 dark:border-white/10 text-gray-900 dark:text-gray-200'
             }`}>
               {/* Image Content */}
               {msg.imageUrl && (
@@ -256,7 +256,7 @@ const AIChat: React.FC<AIChatProps> = ({ isOpen, onToggle, context }) => {
       </div>
 
       {/* Input */}
-      <div className="p-4 border-t border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-surfaceHighlight">
+      <div className="p-4 border-t border-gray-200 dark:border-white/10 bg-gray-100 dark:bg-dark-surfaceHighlight">
         {pastedImage && (
             <div className="mb-2 space-y-2">
                 <div className="relative inline-block">

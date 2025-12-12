@@ -33,7 +33,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, paths, onNavigate, onStartC
         <div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Welcome back, {user.name}</h1>
           <p className="text-gray-500 dark:text-gray-400">
-             Level {Math.floor(user.xp / 1000) + 1} {user.domain} • <span className="text-primary font-semibold">{user.xp} XP</span>
+             Level {Math.floor(user.xp / 1000) + 1} • <span className="text-primary font-semibold">{user.xp} XP</span>
           </p>
         </div>
         <div className="mt-4 md:mt-0 flex gap-4">

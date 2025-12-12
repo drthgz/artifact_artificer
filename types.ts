@@ -1,3 +1,4 @@
+
 export type Domain = 'Engineering' | 'Digital Art' | 'Architecture';
 export type SkillLevel = 'Beginner' | 'Novice' | 'Intermediate' | 'Advanced';
 
@@ -15,6 +16,7 @@ export interface Step {
   title: string;
   description: string;
   criteria: string[];
+  detailedSteps?: string[]; // Step-by-step breakdown
   xpReward: number;
   status: 'locked' | 'active' | 'completed' | 'reviewing';
 }

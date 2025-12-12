@@ -52,6 +52,7 @@ const PathView: React.FC<PathViewProps> = ({ path, onBack, onCompleteStep }) => 
   const [uploading, setUploading] = useState(false);
   const [feedback, setFeedback] = useState<{passed: boolean, text: string} | null>(null);
   const [showConfetti, setShowConfetti] = useState(false);
+  const [showHint, setShowHint] = useState(false); // State for hint toggle
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   // Sync selected step if path updates
@@ -59,8 +60,9 @@ const PathView: React.FC<PathViewProps> = ({ path, onBack, onCompleteStep }) => 
      if (selectedStep) {
          const updatedStep = path.steps.find(s => s.id === selectedStep.id);
          if (updatedStep) setSelectedStep(updatedStep);
+         setShowHint(false); // Reset hint visibility on step change
      }
-  }, [path]);
+  }, [path, selectedStep?.id]);
 
   // Audio effect
   const playCelebrationSound = () => {
@@ -177,7 +179,7 @@ const PathView: React.FC<PathViewProps> = ({ path, onBack, onCompleteStep }) => 
 
       {/* Sidebar List (Flowchart Style) */}
       <div className="w-full md:w-80 border-r border-gray-200 dark:border-white/10 bg-white dark:bg-dark-surface overflow-y-auto flex flex-col z-10 transition-colors">
-        <div className="p-4 border-b border-gray-200 dark:border-white/10 flex items-center gap-2 bg-gray-50 dark:bg-surfaceHighlight sticky top-0 z-20">
+        <div className="p-4 border-b border-gray-200 dark:border-white/10 flex items-center gap-2 bg-gray-50 dark:bg-dark-surfaceHighlight sticky top-0 z-20">
             <button onClick={onBack} className="p-2 hover:bg-gray-200 dark:hover:bg-white/5 rounded-lg text-gray-500 dark:text-gray-400">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
             </button>
@@ -243,6 +245,34 @@ const PathView: React.FC<PathViewProps> = ({ path, onBack, onCompleteStep }) => 
                 <h1 className="text-4xl font-bold text-gray-900 dark:text-white">{selectedStep.title}</h1>
                 <p className="text-xl text-gray-600 dark:text-gray-300 leading-relaxed">{selectedStep.description}</p>
             </div>
+
+            {/* Hint / Step Breakdown Section */}
+            {selectedStep.detailedSteps && selectedStep.detailedSteps.length > 0 && (
+                <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800 rounded-2xl overflow-hidden transition-all">
+                    <button 
+                        onClick={() => setShowHint(!showHint)}
+                        className="w-full flex justify-between items-center p-4 bg-blue-100/50 dark:bg-blue-800/20 text-blue-700 dark:text-blue-300 font-bold hover:bg-blue-200/50 dark:hover:bg-blue-800/30 transition-colors"
+                    >
+                        <span className="flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                            Stuck? Reveal Step-by-Step Guide
+                        </span>
+                        <svg className={`w-5 h-5 transition-transform ${showHint ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                    </button>
+                    
+                    {showHint && (
+                        <div className="p-6 bg-white dark:bg-dark-surface/50">
+                            <ol className="list-decimal pl-5 space-y-3 text-gray-700 dark:text-gray-300">
+                                {selectedStep.detailedSteps.map((step, idx) => (
+                                    <li key={idx} className="pl-2">
+                                        {step}
+                                    </li>
+                                ))}
+                            </ol>
+                        </div>
+                    )}
+                </div>
+            )}
 
             <div className="bg-gray-50 dark:bg-dark-surface rounded-2xl border border-gray-100 dark:border-white/5 p-6 shadow-sm">
                 <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-4">Success Criteria</h3>
