@@ -66,6 +66,7 @@ export const generateLearningPath = async (
     const pathData = JSON.parse(text);
     
     // Enrich with local-only status fields
+    pathData.id = Date.now().toString(); // Ensure ID
     pathData.steps = pathData.steps.map((s: any, index: number) => ({
       ...s,
       status: index === 0 ? 'active' : 'locked'
@@ -135,9 +136,7 @@ export const reviewSubmission = async (
 };
 
 /**
- * Generates a Daily Challenge with a Reference Image.
- * 1. Generates text prompt and metadata.
- * 2. Generates the actual reference image using Imagen/Gemini Image model.
+ * Generates a Daily Challenge with a Reference Image using Gemini 2.5 Flash Image.
  */
 export const generateDailyChallenge = async (domain: string, tool: string): Promise<Challenge> => {
   const ai = getAIClient();
@@ -156,17 +155,31 @@ export const generateDailyChallenge = async (domain: string, tool: string): Prom
     "bronzeTime": number (minutes, relaxed estimate)
   }`;
 
-  const designResp = await ai.models.generateContent({
-    model: MODEL_FAST, // Flash is fine for brainstorming
-    contents: designPrompt,
-    config: { responseMimeType: "application/json" }
-  });
-
-  const design = JSON.parse(designResp.text || "{}");
+  let design;
+  try {
+    const designResp = await ai.models.generateContent({
+        model: MODEL_FAST, // Flash is fine for brainstorming
+        contents: designPrompt,
+        config: { responseMimeType: "application/json" }
+    });
+    design = JSON.parse(designResp.text || "{}");
+  } catch (e) {
+      console.error("Failed to generate challenge text", e);
+      // Fallback design
+      design = {
+          title: "Speed Modeling",
+          theme: "Abstract",
+          description: "Create a simple abstract shape that demonstrates flow.",
+          imagePrompt: "Abstract 3d shape floating in void, colorful",
+          goldTime: 10, silverTime: 20, bronzeTime: 30
+      };
+  }
 
   // Step 2: Generate the Reference Image
   let imageUrl = "";
   try {
+    // Attempt image generation with Gemini 2.5 Flash Image
+    // Note: Flash Image does not support imageSize or responseMimeType/Schema
     const imageResp = await ai.models.generateContent({
       model: MODEL_IMAGE_GEN,
       contents: {
@@ -175,7 +188,7 @@ export const generateDailyChallenge = async (domain: string, tool: string): Prom
       config: {
         imageConfig: {
             aspectRatio: "1:1",
-            imageSize: "1K"
+            // imageSize is NOT supported for Flash Image, removed.
         }
       }
     });
@@ -187,9 +200,14 @@ export const generateDailyChallenge = async (domain: string, tool: string): Prom
         break;
       }
     }
+    
+    // Fallback if no inline data found but no error
+    if (!imageUrl) throw new Error("No image data returned from model");
+
   } catch (e) {
-    console.warn("Image generation failed, using placeholder", e);
-    imageUrl = "https://picsum.photos/500/500?grayscale"; // Fallback
+    console.warn("Image generation failed or not permitted, using placeholder", e);
+    // Use a reliable placeholder service if generation fails
+    imageUrl = `https://placehold.co/600x600/20BEFF/ffffff?text=${encodeURIComponent(design.title)}`;
   }
 
   return {
@@ -202,6 +220,67 @@ export const generateDailyChallenge = async (domain: string, tool: string): Prom
     silverTime: design.silverTime,
     bronzeTime: design.bronzeTime
   };
+};
+
+/**
+ * Edits an image based on a text prompt using Gemini 2.5 Flash Image.
+ */
+export const editImage = async (base64Image: string, prompt: string): Promise<string> => {
+    const ai = getAIClient();
+    // Strip prefix if present in base64Image (data:image/xxx;base64,...)
+    const data = base64Image.includes(',') ? base64Image.split(',')[1] : base64Image;
+    
+    try {
+      const response = await ai.models.generateContent({
+          model: MODEL_IMAGE_GEN,
+          contents: {
+              parts: [
+                  { 
+                      inlineData: { 
+                          mimeType: 'image/png', // Model is robust to mime types
+                          data 
+                      } 
+                  },
+                  { text: prompt }
+              ]
+          },
+          config: {
+               imageConfig: { aspectRatio: '1:1' }
+          }
+      });
+      
+      // Find image part in response
+      for (const part of response.candidates?.[0]?.content?.parts || []) {
+          if (part.inlineData) {
+              return `data:image/png;base64,${part.inlineData.data}`;
+          }
+      }
+      throw new Error("No image generated");
+    } catch (error) {
+      console.error("Edit image failed", error);
+      throw error;
+    }
+}
+
+/**
+ * Generates a specific technical hint for the current challenge.
+ */
+export const generateHint = async (tool: string, challenge: Challenge): Promise<string> => {
+  const ai = getAIClient();
+  const prompt = `Give a short, precise technical hint for a user using ${tool} to create: "${challenge.title}".
+  Description: ${challenge.description}.
+  Focus on a specific workflow, modifier, or shortcut that saves time.
+  Keep it under 30 words. Do not be generic.`;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: MODEL_FAST,
+      contents: prompt
+    });
+    return response.text || "Try breaking the shape down into primitive blocks first.";
+  } catch (e) {
+    return "Check your topology flow before adding details.";
+  }
 };
 
 /**

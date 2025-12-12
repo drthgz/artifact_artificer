@@ -42,5 +42,6 @@ export interface ChatMessage {
   id: string;
   role: 'user' | 'model';
   text: string;
+  imageUrl?: string; // For displaying generated/edited images
   timestamp: number;
 }

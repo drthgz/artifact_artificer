@@ -1,7 +1,7 @@
 // Models
 export const MODEL_FAST = 'gemini-2.5-flash';
 export const MODEL_REASONING = 'gemini-3-pro-preview';
-export const MODEL_IMAGE_GEN = 'gemini-3-pro-image-preview';
+export const MODEL_IMAGE_GEN = 'gemini-2.5-flash-image'; // Nano Banana
 
 // Configuration
 export const MAX_THINKING_BUDGET = 32768; // Max for Pro

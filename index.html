@@ -8,6 +8,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <script>
       tailwind.config = {
+        darkMode: 'class',
         theme: {
           extend: {
             fontFamily: {
@@ -15,45 +16,72 @@
               mono: ['JetBrains Mono', 'monospace'],
             },
             colors: {
-              background: '#0f1115',
-              surface: '#181b21',
-              surfaceHighlight: '#22262e',
-              primary: '#3b82f6',
-              secondary: '#a855f7',
-              accent: '#f59e0b',
+              // Light mode defaults (Kaggle-inspired)
+              background: '#ffffff',
+              surface: '#f1f5f9', // slate-100
+              surfaceHighlight: '#e2e8f0', // slate-200
+              textMain: '#0f172a',
+              textMuted: '#64748b',
+              
+              // Brand
+              primary: '#20BEFF', // Cyan/Kaggle Blue
+              primaryDark: '#00A1E0',
+              secondary: '#1e293b', // Slate-800
+              accent: '#FACC15', // Yellow
+              
+              // Dark mode overrides defined in CSS or utility classes
+              dark: {
+                background: '#0f1115',
+                surface: '#181b21',
+                surfaceHighlight: '#22262e',
+              }
             }
           }
         }
       }
     </script>
     <style>
+      /* Smooth transitions for theme switch */
       body {
+        transition: background-color 0.3s, color 0.3s;
+      }
+      
+      /* Dark mode specific overrides using CSS variables logic or simple class scoping */
+      .dark body {
         background-color: #0f1115;
         color: #e2e8f0;
       }
+      
       /* Custom Scrollbar */
       ::-webkit-scrollbar {
         width: 8px;
         height: 8px;
       }
       ::-webkit-scrollbar-track {
-        background: #181b21; 
+        background: transparent; 
       }
       ::-webkit-scrollbar-thumb {
-        background: #334155; 
+        background: #cbd5e1; 
         border-radius: 4px;
       }
-      ::-webkit-scrollbar-thumb:hover {
-        background: #475569; 
+      .dark ::-webkit-scrollbar-thumb {
+        background: #334155;
       }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8; 
+      }
+      
       /* Markdown Styles */
       .prose p { margin-bottom: 0.5em; }
-      .prose code { background: rgba(255,255,255,0.1); padding: 0.2em 0.4em; border-radius: 4px; font-family: 'JetBrains Mono', monospace; font-size: 0.9em; }
-      .prose pre { background: rgba(0,0,0,0.3); padding: 1em; border-radius: 8px; overflow-x: auto; margin: 0.5em 0; }
+      .prose code { background: rgba(0,0,0,0.05); padding: 0.2em 0.4em; border-radius: 4px; font-family: 'JetBrains Mono', monospace; font-size: 0.9em; }
+      .dark .prose code { background: rgba(255,255,255,0.1); }
+      
+      .prose pre { background: #1e293b; color: white; padding: 1em; border-radius: 8px; overflow-x: auto; margin: 0.5em 0; }
+      
       .prose ul { list-style-type: disc; padding-left: 1.5em; margin-bottom: 0.5em; }
       .prose ol { list-style-type: decimal; padding-left: 1.5em; margin-bottom: 0.5em; }
-      .prose strong { color: #fff; font-weight: 600; }
-      .prose a { color: #3b82f6; text-decoration: underline; }
+      .prose strong { font-weight: 600; }
+      .prose a { color: #20BEFF; text-decoration: underline; }
     </style>
   <script type="importmap">
 {
@@ -67,7 +95,7 @@
 }
 </script>
 </head>
-  <body>
+  <body class="bg-background text-textMain dark:bg-dark-background dark:text-gray-200">
     <div id="root"></div>
   </body>
 </html>

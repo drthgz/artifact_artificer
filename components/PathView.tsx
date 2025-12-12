@@ -54,6 +54,14 @@ const PathView: React.FC<PathViewProps> = ({ path, onBack, onCompleteStep }) => 
   const [showConfetti, setShowConfetti] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
+  // Sync selected step if path updates
+  useEffect(() => {
+     if (selectedStep) {
+         const updatedStep = path.steps.find(s => s.id === selectedStep.id);
+         if (updatedStep) setSelectedStep(updatedStep);
+     }
+  }, [path]);
+
   // Audio effect
   const playCelebrationSound = () => {
     const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
@@ -88,7 +96,7 @@ const PathView: React.FC<PathViewProps> = ({ path, onBack, onCompleteStep }) => 
         if (!ctx) return;
         
         let particles: Particle[] = [];
-        const colors = ['#3b82f6', '#a855f7', '#f59e0b', '#10b981', '#ef4444'];
+        const colors = ['#20BEFF', '#a855f7', '#FACC15', '#10b981', '#ef4444'];
         
         // Spawn particles
         for (let i = 0; i < 100; i++) {
@@ -150,17 +158,15 @@ const PathView: React.FC<PathViewProps> = ({ path, onBack, onCompleteStep }) => 
       const idx = path.steps.findIndex(s => s.id === selectedStep.id);
       if (idx !== -1 && idx < path.steps.length - 1) {
           const nextStep = path.steps[idx + 1];
-          // Pre-emptively set status for UI, although parent prop update will sync
-          nextStep.status = 'active'; 
           setSelectedStep(nextStep);
-          setFeedback(null); // Clear feedback
+          setFeedback(null); 
       } else {
-          setFeedback(null); // Just clear if it's the last one
+          setFeedback(null); 
       }
   };
 
   return (
-    <div className="h-screen flex flex-col md:flex-row bg-background relative overflow-hidden">
+    <div className="h-screen flex flex-col md:flex-row bg-surface dark:bg-dark-background relative overflow-hidden">
       {/* Confetti Canvas */}
       <canvas 
         ref={canvasRef} 
@@ -170,17 +176,17 @@ const PathView: React.FC<PathViewProps> = ({ path, onBack, onCompleteStep }) => 
       />
 
       {/* Sidebar List (Flowchart Style) */}
-      <div className="w-full md:w-80 border-r border-white/10 bg-surface overflow-y-auto flex flex-col z-10">
-        <div className="p-4 border-b border-white/10 flex items-center gap-2 bg-surfaceHighlight sticky top-0 z-20">
-            <button onClick={onBack} className="p-2 hover:bg-white/5 rounded-lg text-gray-400 hover:text-white">
+      <div className="w-full md:w-80 border-r border-gray-200 dark:border-white/10 bg-white dark:bg-dark-surface overflow-y-auto flex flex-col z-10 transition-colors">
+        <div className="p-4 border-b border-gray-200 dark:border-white/10 flex items-center gap-2 bg-gray-50 dark:bg-surfaceHighlight sticky top-0 z-20">
+            <button onClick={onBack} className="p-2 hover:bg-gray-200 dark:hover:bg-white/5 rounded-lg text-gray-500 dark:text-gray-400">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
             </button>
-            <h2 className="font-bold text-white truncate text-sm">{path.title}</h2>
+            <h2 className="font-bold text-gray-900 dark:text-white truncate text-sm">{path.title}</h2>
         </div>
         
         <div className="flex-1 p-6 relative">
             {/* Vertical Connector Line */}
-            <div className="absolute left-[38px] top-6 bottom-6 w-0.5 bg-white/10"></div>
+            <div className="absolute left-[38px] top-6 bottom-6 w-0.5 bg-gray-200 dark:bg-white/10"></div>
 
             <div className="space-y-8">
                 {path.steps.map((step, idx) => {
@@ -198,24 +204,24 @@ const PathView: React.FC<PathViewProps> = ({ path, onBack, onCompleteStep }) => 
                             {/* Node Icon */}
                             <div className={`relative z-10 flex-shrink-0 w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all ${
                                 isActive 
-                                    ? 'bg-primary border-primary shadow-[0_0_15px_rgba(59,130,246,0.6)] scale-110' 
+                                    ? 'bg-primary border-primary shadow-[0_0_15px_rgba(32,190,255,0.6)] scale-110' 
                                     : isCompleted 
-                                        ? 'bg-secondary border-secondary' 
-                                        : 'bg-surface border-gray-700 group-hover:border-gray-500'
+                                        ? 'bg-green-500 border-green-500' 
+                                        : 'bg-white dark:bg-dark-surface border-gray-300 dark:border-gray-600 group-hover:border-primary'
                             }`}>
                                 {isCompleted ? (
                                     <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
                                 ) : (
-                                    <span className={`text-xs font-mono font-bold ${isActive ? 'text-white' : 'text-gray-500'}`}>{idx + 1}</span>
+                                    <span className={`text-xs font-mono font-bold ${isActive ? 'text-white' : 'text-gray-500 dark:text-gray-400'}`}>{idx + 1}</span>
                                 )}
                             </div>
 
                             {/* Content */}
                             <div className={`flex-1 pt-1 transition-all ${isActive ? 'translate-x-1' : ''}`}>
-                                <h3 className={`font-semibold text-sm ${isActive ? 'text-white' : 'text-gray-400 group-hover:text-gray-300'}`}>
+                                <h3 className={`font-semibold text-sm ${isActive ? 'text-primary' : 'text-gray-600 dark:text-gray-400 group-hover:text-primary'}`}>
                                     {step.title}
                                 </h3>
-                                <div className="text-xs text-gray-600 mt-1 font-mono">
+                                <div className="text-xs text-gray-400 dark:text-gray-500 mt-1 font-mono">
                                     {isCompleted ? 'COMPLETED' : isActive ? 'IN PROGRESS' : 'LOCKED'}
                                 </div>
                             </div>
@@ -227,22 +233,22 @@ const PathView: React.FC<PathViewProps> = ({ path, onBack, onCompleteStep }) => 
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 overflow-y-auto p-8 relative">
+      <div className="flex-1 overflow-y-auto p-8 relative bg-white dark:bg-dark-background text-gray-900 dark:text-gray-200 transition-colors">
         {selectedStep && (
           <div className="max-w-3xl mx-auto space-y-8 pb-20">
             <div className="space-y-4">
-                <div className="inline-block px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs font-mono text-gray-400">
+                <div className="inline-block px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-xs font-mono text-primary font-bold">
                     MODULE {path.steps.findIndex(s => s.id === selectedStep.id) + 1}
                 </div>
-                <h1 className="text-4xl font-bold text-white">{selectedStep.title}</h1>
-                <p className="text-xl text-gray-300 leading-relaxed">{selectedStep.description}</p>
+                <h1 className="text-4xl font-bold text-gray-900 dark:text-white">{selectedStep.title}</h1>
+                <p className="text-xl text-gray-600 dark:text-gray-300 leading-relaxed">{selectedStep.description}</p>
             </div>
 
-            <div className="bg-surface rounded-2xl border border-white/5 p-6">
-                <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">Success Criteria</h3>
+            <div className="bg-gray-50 dark:bg-dark-surface rounded-2xl border border-gray-100 dark:border-white/5 p-6 shadow-sm">
+                <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-4">Success Criteria</h3>
                 <ul className="space-y-3">
                     {selectedStep.criteria.map((c, i) => (
-                        <li key={i} className="flex items-start gap-3 text-gray-300">
+                        <li key={i} className="flex items-start gap-3 text-gray-700 dark:text-gray-300">
                             <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0"></div>
                             <span>{c}</span>
                         </li>
@@ -251,10 +257,10 @@ const PathView: React.FC<PathViewProps> = ({ path, onBack, onCompleteStep }) => 
             </div>
 
             {/* Submission Area */}
-            <div className="bg-black/20 rounded-2xl border border-white/10 p-8 text-center transition-all">
+            <div className="bg-gray-50 dark:bg-black/20 rounded-2xl border border-gray-200 dark:border-white/10 p-8 text-center transition-all">
                 {selectedStep.status === 'completed' && !feedback ? (
                      // State: Completed before this session
-                    <div className="text-green-400 flex flex-col items-center gap-2">
+                    <div className="text-green-500 flex flex-col items-center gap-2">
                         <svg className="w-16 h-16 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                         <span className="text-xl font-bold">Module Completed</span>
                     </div>
@@ -262,11 +268,11 @@ const PathView: React.FC<PathViewProps> = ({ path, onBack, onCompleteStep }) => 
                     // State: Just passed
                     <div className="space-y-6 animate-fade-in">
                         <div className="p-6 rounded-xl bg-green-500/10 border border-green-500/30 text-left">
-                            <h4 className="font-bold text-green-400 text-lg mb-2 flex items-center gap-2">
+                            <h4 className="font-bold text-green-600 dark:text-green-400 text-lg mb-2 flex items-center gap-2">
                                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
                                 Excellent Work!
                             </h4>
-                            <p className="text-gray-300">{feedback.text}</p>
+                            <p className="text-gray-700 dark:text-gray-300">{feedback.text}</p>
                         </div>
                         
                         <button 
@@ -280,11 +286,11 @@ const PathView: React.FC<PathViewProps> = ({ path, onBack, onCompleteStep }) => 
                 ) : (
                     // State: Needs submission or failed
                     <>
-                        <h3 className="text-lg font-semibold text-white mb-2">Ready to Submit?</h3>
-                        <p className="text-gray-400 mb-6">Upload a screenshot or render of your work. The AI will review it against the criteria above.</p>
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Ready to Submit?</h3>
+                        <p className="text-gray-500 dark:text-gray-400 mb-6">Upload a screenshot or render of your work. The AI will review it against the criteria above.</p>
                         
                         <div className="flex justify-center">
-                             <label className={`cursor-pointer bg-primary hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-xl shadow-lg transition-all flex items-center gap-2 ${uploading ? 'opacity-50 pointer-events-none' : ''}`}>
+                             <label className={`cursor-pointer bg-primary hover:bg-primaryDark text-white font-bold py-3 px-6 rounded-xl shadow-lg shadow-primary/20 transition-all flex items-center gap-2 ${uploading ? 'opacity-50 pointer-events-none' : ''}`}>
                                 {uploading ? (
                                     <>
                                         <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
@@ -302,11 +308,11 @@ const PathView: React.FC<PathViewProps> = ({ path, onBack, onCompleteStep }) => 
 
                         {feedback && !feedback.passed && (
                             <div className="mt-6 p-4 rounded-xl text-left bg-red-500/10 border border-red-500/30">
-                                <h4 className="font-bold text-red-400 mb-1 flex items-center gap-2">
+                                <h4 className="font-bold text-red-500 mb-1 flex items-center gap-2">
                                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
                                     Revision Needed
                                 </h4>
-                                <p className="text-gray-300 text-sm whitespace-pre-wrap">{feedback.text}</p>
+                                <p className="text-gray-600 dark:text-gray-300 text-sm whitespace-pre-wrap">{feedback.text}</p>
                             </div>
                         )}
                     </>

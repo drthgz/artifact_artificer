@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { createChatSession } from '../services/geminiService';
+import { createChatSession, editImage } from '../services/geminiService';
 import { ChatMessage } from '../types';
 import { Chat, GenerateContentResponse, Part } from "@google/genai";
 import { marked } from 'marked';
@@ -26,6 +26,8 @@ const AIChat: React.FC<AIChatProps> = ({ isOpen, onToggle, context }) => {
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [pastedImage, setPastedImage] = useState<string | null>(null);
+  const [mode, setMode] = useState<'chat' | 'edit'>('chat'); // Toggle for image mode
+  
   const chatSessionRef = useRef<Chat | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -38,6 +40,11 @@ const AIChat: React.FC<AIChatProps> = ({ isOpen, onToggle, context }) => {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isOpen, isTyping]);
+
+  // Reset mode when image cleared
+  useEffect(() => {
+    if (!pastedImage) setMode('chat');
+  }, [pastedImage]);
 
   // Handle Paste (Images)
   const handlePaste = (e: React.ClipboardEvent) => {
@@ -52,6 +59,7 @@ const AIChat: React.FC<AIChatProps> = ({ isOpen, onToggle, context }) => {
                 if (event.target?.result) {
                     // Get base64 string without prefix for API, but keep full for preview
                     setPastedImage(event.target.result as string);
+                    setMode('chat'); // Default to chat
                 }
             };
             reader.readAsDataURL(blob);
@@ -61,75 +69,102 @@ const AIChat: React.FC<AIChatProps> = ({ isOpen, onToggle, context }) => {
   };
 
   const handleSend = async () => {
-    if ((!input.trim() && !pastedImage) || !chatSessionRef.current) return;
+    if ((!input.trim() && !pastedImage) || isTyping) return;
 
     // Display user message
     const userMsg: ChatMessage = {
       id: Date.now().toString(),
       role: 'user',
-      text: input, // We'll show the image separately in UI if needed, currently just showing text
+      text: input, 
+      imageUrl: pastedImage || undefined,
       timestamp: Date.now()
     };
 
     setMessages(prev => [...prev, userMsg]);
     const currentInput = input;
     const currentImage = pastedImage;
+    const currentMode = mode;
     
     setInput('');
     setPastedImage(null);
     setIsTyping(true);
 
     try {
-      // Construct parts for the model
-      // We prepend context to the text part so the model knows what's up without user seeing it in bubble
-      const contextPrompt = `
-      [SYSTEM CONTEXT]
-      User Tool: ${context.tool}
-      Current Module: ${context.stepTitle || 'General'}
-      Task Description: ${context.stepDesc || 'N/A'}
-      
-      Please provide specific advice for ${context.tool}. Do NOT include markdown code blocks or HTML tags in your response unless absolutely necessary for code snippets. Keep the response clean and readable.
-      [END CONTEXT]
-      
-      ${currentInput}
-      `;
+      if (currentMode === 'edit' && currentImage) {
+        // Image Editing Flow (Nano Banana)
+        try {
+            const editedImageBase64 = await editImage(currentImage, currentInput || "Enhance this image");
+            
+            setMessages(prev => [...prev, {
+                id: Date.now().toString(),
+                role: 'model',
+                text: "Here is the edited version:",
+                imageUrl: editedImageBase64,
+                timestamp: Date.now()
+            }]);
+        } catch (err) {
+            setMessages(prev => [...prev, {
+                id: Date.now().toString(),
+                role: 'model',
+                text: "Sorry, I couldn't process the image edit request.",
+                timestamp: Date.now()
+            }]);
+        }
+      } else {
+        // Standard Chat Flow (Gemini Flash)
+        if (!chatSessionRef.current) return;
 
-      const parts: (string | Part)[] = [{ text: contextPrompt }];
-      
-      if (currentImage) {
-          // Remove data url prefix for API
-          const base64Data = currentImage.split(',')[1];
-          parts.unshift({
-              inlineData: {
-                  mimeType: 'image/png', // Assuming png or jpeg, simple handling
-                  data: base64Data
-              }
-          });
-      }
-
-      const result = await chatSessionRef.current.sendMessageStream({ 
-          message: parts.length === 1 ? parts[0] as string : parts 
-      });
-      
-      let fullResponse = '';
-      const botMsgId = (Date.now() + 1).toString();
-      
-      // Add placeholder for bot message
-      setMessages(prev => [...prev, {
-        id: botMsgId,
-        role: 'model',
-        text: '',
-        timestamp: Date.now()
-      }]);
-
-      for await (const chunk of result) {
-        const c = chunk as GenerateContentResponse;
-        const textChunk = c.text || '';
-        fullResponse += textChunk;
+        // Construct parts for the model
+        // We prepend context to the text part so the model knows what's up without user seeing it in bubble
+        const contextPrompt = `
+        [SYSTEM CONTEXT]
+        User Tool: ${context.tool}
+        Current Module: ${context.stepTitle || 'General'}
+        Task Description: ${context.stepDesc || 'N/A'}
         
-        setMessages(prev => prev.map(msg => 
-          msg.id === botMsgId ? { ...msg, text: fullResponse } : msg
-        ));
+        Please provide specific advice for ${context.tool}. Do NOT include markdown code blocks or HTML tags in your response unless absolutely necessary for code snippets. Keep the response clean and readable.
+        [END CONTEXT]
+        
+        ${currentInput}
+        `;
+
+        const parts: (string | Part)[] = [{ text: contextPrompt }];
+        
+        if (currentImage) {
+            // Remove data url prefix for API
+            const base64Data = currentImage.split(',')[1];
+            parts.unshift({
+                inlineData: {
+                    mimeType: 'image/png', // Assuming png or jpeg, simple handling
+                    data: base64Data
+                }
+            });
+        }
+
+        const result = await chatSessionRef.current.sendMessageStream({ 
+            message: parts.length === 1 ? parts[0] as string : parts 
+        });
+        
+        let fullResponse = '';
+        const botMsgId = (Date.now() + 1).toString();
+        
+        // Add placeholder for bot message
+        setMessages(prev => [...prev, {
+            id: botMsgId,
+            role: 'model',
+            text: '',
+            timestamp: Date.now()
+        }]);
+
+        for await (const chunk of result) {
+            const c = chunk as GenerateContentResponse;
+            const textChunk = c.text || '';
+            fullResponse += textChunk;
+            
+            setMessages(prev => prev.map(msg => 
+            msg.id === botMsgId ? { ...msg, text: fullResponse } : msg
+            ));
+        }
       }
     } catch (error) {
       console.error("Chat error", error);
@@ -163,7 +198,7 @@ const AIChat: React.FC<AIChatProps> = ({ isOpen, onToggle, context }) => {
         onClick={onToggle}
         className="fixed bottom-6 right-6 bg-primary hover:bg-blue-600 text-white p-4 rounded-full shadow-lg z-50 transition-all transform hover:scale-105"
       >
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2-2z"></path></svg>
       </button>
     );
   }
@@ -188,13 +223,23 @@ const AIChat: React.FC<AIChatProps> = ({ isOpen, onToggle, context }) => {
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.map((msg) => (
           <div key={msg.id} className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
-            <div className={`max-w-[90%] rounded-lg p-3 text-sm ${
+            <div className={`max-w-[90%] rounded-lg overflow-hidden border border-white/5 ${
               msg.role === 'user' 
                 ? 'bg-primary text-white' 
-                : 'bg-white/5 text-gray-200 border border-white/5'
+                : 'bg-white/5 text-gray-200'
             }`}>
-              {/* Note: We only display text here. If user sent image, we could show thumbnail above bubble */}
-              {msg.role === 'model' ? renderMessageText(msg.text) : msg.text}
+              {/* Image Content */}
+              {msg.imageUrl && (
+                  <div className="w-full">
+                      <img src={msg.imageUrl} alt="Content" className="w-full h-auto object-cover max-h-60" />
+                  </div>
+              )}
+              {/* Text Content */}
+              {(msg.text || !msg.imageUrl) && (
+                <div className="p-3 text-sm">
+                    {msg.role === 'model' ? renderMessageText(msg.text) : msg.text}
+                </div>
+              )}
             </div>
           </div>
         ))}
@@ -213,14 +258,31 @@ const AIChat: React.FC<AIChatProps> = ({ isOpen, onToggle, context }) => {
       {/* Input */}
       <div className="p-4 border-t border-white/10 bg-surfaceHighlight">
         {pastedImage && (
-            <div className="mb-2 relative inline-block">
-                <img src={pastedImage} alt="Paste" className="h-16 rounded border border-white/20" />
-                <button 
-                    onClick={() => setPastedImage(null)}
-                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 w-5 h-5 flex items-center justify-center text-xs"
-                >
-                    ×
-                </button>
+            <div className="mb-2 space-y-2">
+                <div className="relative inline-block">
+                    <img src={pastedImage} alt="Paste" className="h-16 rounded border border-white/20" />
+                    <button 
+                        onClick={() => setPastedImage(null)}
+                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 w-5 h-5 flex items-center justify-center text-xs"
+                    >
+                        ×
+                    </button>
+                </div>
+                {/* Mode Toggle */}
+                <div className="flex gap-1 bg-black/20 p-1 rounded-lg w-fit">
+                    <button 
+                        onClick={() => setMode('chat')}
+                        className={`px-3 py-1 text-xs rounded-md transition-all ${mode === 'chat' ? 'bg-primary text-white' : 'text-gray-400 hover:text-white'}`}
+                    >
+                        Analyze
+                    </button>
+                    <button 
+                        onClick={() => setMode('edit')}
+                        className={`px-3 py-1 text-xs rounded-md transition-all ${mode === 'edit' ? 'bg-accent text-black font-bold' : 'text-gray-400 hover:text-white'}`}
+                    >
+                        Magic Edit
+                    </button>
+                </div>
             </div>
         )}
         <textarea
@@ -228,7 +290,7 @@ const AIChat: React.FC<AIChatProps> = ({ isOpen, onToggle, context }) => {
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyPress}
           onPaste={handlePaste}
-          placeholder={`Ask about ${context.stepTitle || context.tool}... (Paste images supported)`}
+          placeholder={pastedImage && mode === 'edit' ? "Describe changes (e.g. 'Add a neon glow')..." : `Ask about ${context.stepTitle || context.tool}...`}
           className="w-full bg-black/20 border border-white/10 rounded-lg p-3 text-sm text-white focus:outline-none focus:border-primary resize-none h-20"
         />
         <div className="flex justify-between items-center mt-2 text-xs text-gray-500">
@@ -236,9 +298,9 @@ const AIChat: React.FC<AIChatProps> = ({ isOpen, onToggle, context }) => {
           <button 
             onClick={handleSend}
             disabled={(!input.trim() && !pastedImage) || isTyping}
-            className="bg-primary hover:bg-blue-600 disabled:opacity-50 text-white px-3 py-1 rounded transition-colors"
+            className={`px-3 py-1 rounded transition-colors text-white disabled:opacity-50 ${mode === 'edit' && pastedImage ? 'bg-accent text-black font-bold hover:bg-yellow-300' : 'bg-primary hover:bg-blue-600'}`}
           >
-            Send
+            {mode === 'edit' && pastedImage ? 'Generate' : 'Send'}
           </button>
         </div>
       </div>

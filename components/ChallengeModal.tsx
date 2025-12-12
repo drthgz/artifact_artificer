@@ -4,9 +4,10 @@ import { Challenge } from '../types';
 interface ChallengeModalProps {
   challenge: Challenge;
   onClose: () => void;
+  onStart: () => void;
 }
 
-const ChallengeModal: React.FC<ChallengeModalProps> = ({ challenge, onClose }) => {
+const ChallengeModal: React.FC<ChallengeModalProps> = ({ challenge, onClose, onStart }) => {
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose}></div>
@@ -62,7 +63,7 @@ const ChallengeModal: React.FC<ChallengeModalProps> = ({ challenge, onClose }) =
             <div className="mt-auto">
                 <p className="text-sm text-gray-500 text-center mb-4">Launch your tool and start the timer when ready.</p>
                 <button 
-                    onClick={onClose}
+                    onClick={onStart}
                     className="w-full bg-white text-black hover:bg-gray-200 font-bold py-3 rounded-xl transition-colors"
                 >
                     I'm Ready!
